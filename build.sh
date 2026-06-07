@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
-# build.sh — cross-compile MatrixSaver for Windows from Linux
-# Requires: .NET 8 SDK  (run: curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0)
+# build.sh — cross-compile MatrixSaver for Windows from Linux/macOS
 set -euo pipefail
 
-export PATH="$HOME/.dotnet:$PATH"
+# Locate dotnet — check PATH first, then the default install location
+if ! command -v dotnet &>/dev/null; then
+    if [ -x "$HOME/.dotnet/dotnet" ]; then
+        export PATH="$HOME/.dotnet:$PATH"
+    else
+        echo "ERROR: dotnet SDK not found."
+        echo "Install with:"
+        echo "  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0"
+        exit 1
+    fi
+fi
+
+echo "Using $(dotnet --version) at $(command -v dotnet)"
+echo ""
 
 echo "▶ Restoring packages..."
 dotnet restore -r win-x64
@@ -20,23 +32,25 @@ dotnet publish \
 # Rename exe → scr (screensavers are just renamed exes on Windows)
 if [ -f dist/MatrixSaver.exe ]; then
   cp dist/MatrixSaver.exe dist/MatrixSaver.scr
+  echo ""
   echo "✓ dist/MatrixSaver.exe"
   echo "✓ dist/MatrixSaver.scr"
 fi
 
-echo "▶ Checking matrix engine..."
-if [ -d dist/matrix ]; then
-  echo "✓ dist/matrix/ ($(find dist/matrix -type f | wc -l) files)"
-else
-  echo "✗ dist/matrix/ missing — copy it manually alongside the exe"
+# Verify the matrix submodule is populated
+if [ ! -f matrix/index.html ]; then
+  echo ""
+  echo "⚠  matrix/index.html not found — populate the submodule first:"
+  echo "   git submodule update --init --recursive"
+  exit 1
 fi
 
 echo ""
 echo "─────────────────────────────────────────────────────────────────"
-echo "Build complete!  Distribute everything in dist/"
+echo "Build complete.  Everything in dist/ is the full distribution."
 echo ""
 echo "On Windows:"
-echo "  1. Extract dist/ to any folder (e.g. C:\\MatrixSaver\\)"
+echo "  1. Copy the dist/ folder to a permanent location"
 echo "  2. Run install.bat as Administrator"
 echo "  OR: Right-click MatrixSaver.scr → Install"
 echo "─────────────────────────────────────────────────────────────────"

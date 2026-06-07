@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -10,19 +9,18 @@ internal sealed class SettingsForm : Form
 {
     private readonly WebView2      _webView = new();
     private readonly string        _appDir;
-    private readonly ConfigBridge  _bridge;
+    private readonly ConfigBridge  _bridge  = new();
 
     public SettingsForm(string appDir)
     {
         _appDir = appDir;
-        _bridge = new ConfigBridge(appDir);
 
-        Text            = "Matrix Screensaver — Settings";
-        Width           = 1080;
-        Height          = 760;
-        MinimumSize     = new Size(820, 600);
-        BackColor       = Color.FromArgb(10, 10, 10);
-        StartPosition   = FormStartPosition.CenterScreen;
+        Text          = "Matrix Screensaver — Settings";
+        Width         = 1080;
+        Height        = 760;
+        MinimumSize   = new Size(820, 600);
+        BackColor     = Color.FromArgb(10, 10, 10);
+        StartPosition = FormStartPosition.CenterScreen;
 
         _webView.Dock = DockStyle.Fill;
         Controls.Add(_webView);
@@ -40,23 +38,24 @@ internal sealed class SettingsForm : Form
             .CreateAsync(null, userDataDir);
         await _webView.EnsureCoreWebView2Async(env);
 
-        // Map matrix files — used by the live preview iframe in settings.html
+        // matrix.local → matrix engine files (used by the live preview iframe)
         _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             "matrix.local",
             System.IO.Path.Combine(_appDir, "matrix"),
             Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
 
-        // Map app files (settings.html, settings.js) to a virtual host
+        // app.local → settings.html + settings.js
         _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             "app.local",
             _appDir,
             Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
 
-        // Register C# bridge — called from JavaScript as chrome.webview.hostObjects.configBridge
+        // Register C# bridge as chrome.webview.hostObjects.configBridge
         _webView.CoreWebView2.AddHostObjectToScript("configBridge", _bridge);
 
         // Inject adapter before any page script runs.
-        // Replaces the Electron contextBridge configAPI with equivalent WebView2 calls.
+        // Creates window.configAPI matching the interface settings.js expects,
+        // delegating to the C# ConfigBridge via WebView2 host objects.
         const string adapter = """
             (function() {
                 const b = chrome.webview.hostObjects.configBridge;
@@ -71,30 +70,5 @@ internal sealed class SettingsForm : Form
         await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(adapter);
 
         _webView.Source = new Uri("http://app.local/settings.html");
-    }
-}
-
-// ── COM-visible bridge: C# methods callable from JavaScript via host objects ──
-[ComVisible(true)]
-[ClassInterface(ClassInterfaceType.AutoDual)]
-public class ConfigBridge
-{
-    private readonly string _appDir;
-
-    public ConfigBridge(string appDir) => _appDir = appDir;
-
-    public string GetConfig()    => ConfigManager.ToJson(ConfigManager.Load());
-    public string GetDefaults()  => ConfigManager.DefaultsJson();
-
-    public bool SaveConfig(string json)
-    {
-        var cfg = ConfigManager.FromJson(json);
-        return cfg != null && ConfigManager.Save(cfg);
-    }
-
-    public string GetMatrixURL(string json)
-    {
-        var cfg = ConfigManager.FromJson(json) ?? ConfigManager.Load();
-        return UrlBuilder.Build(cfg);
     }
 }

@@ -15,7 +15,6 @@ static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-        // ── Resolve the directory that contains our files ─────────────────
         // When running as a single-file publish the exe extracts to a temp dir;
         // AppContext.BaseDirectory points there. The matrix/ folder and
         // settings.html are placed alongside the exe at build time.
@@ -28,22 +27,20 @@ static class Program
         //   <name>.scr /s        → run screensaver
         //   <name>.scr /p <hwnd> → show preview in parent window
         //   <name>.scr /c        → open settings (also /c:<hwnd> on some Windows)
-        string mode      = "screensaver";
+        string mode        = "screensaver";
         nint   previewHwnd = 0;
 
-        string[] args = rawArgs;
-        for (int i = 0; i < args.Length; i++)
+        for (int i = 0; i < rawArgs.Length; i++)
         {
-            // Strip leading / or - and any :hwnd suffix
-            string raw = args[i];
+            string raw = rawArgs[i];
             string key = raw.TrimStart('/', '-').Split(':')[0].ToLowerInvariant();
 
-            if      (key == "s") { mode = "screensaver"; }
-            else if (key == "p") {
+            if (key == "s") { mode = "screensaver"; }
+            else if (key == "p")
+            {
                 mode = "preview";
-                // hwnd may be next arg or after a colon: /p:12345 or /p 12345
                 string? hwndStr = raw.Contains(':') ? raw.Split(':')[1]
-                                : (i + 1 < args.Length ? args[++i] : null);
+                                : (i + 1 < rawArgs.Length ? rawArgs[++i] : null);
                 if (hwndStr != null && long.TryParse(hwndStr, out long h))
                     previewHwnd = (nint)h;
             }
@@ -52,17 +49,9 @@ static class Program
 
         switch (mode)
         {
-            case "screensaver":
-                RunScreensaver(appDir);
-                break;
-
-            case "preview":
-                RunPreview(appDir, previewHwnd);
-                break;
-
-            case "settings":
-                Application.Run(new SettingsForm(appDir));
-                break;
+            case "screensaver": RunScreensaver(appDir); break;
+            case "preview":     RunPreview(appDir, previewHwnd); break;
+            case "settings":    Application.Run(new SettingsForm(appDir)); break;
         }
     }
 
@@ -72,25 +61,23 @@ static class Program
         var config = ConfigManager.Load();
         string url = UrlBuilder.Build(config);
 
-        // Tell Windows we are a screensaver. This causes the taskbar to yield
-        // its z-order and suppresses the "taskbar auto-raise" timer.
+        // Tell Windows a screensaver is running. This suppresses the taskbar
+        // auto-raise timer and yields z-order to our TOPMOST windows.
         NativeMethods.SetScreensaverRunning(true);
         try
         {
-            var screens = Screen.AllScreens;
-            Screen primary = Screen.PrimaryScreen ?? screens[0];
+            Screen primary = Screen.PrimaryScreen ?? Screen.AllScreens[0];
 
-            var forms = screens.Select(s =>
-                new ScreensaverForm(s, s.DeviceName == primary.DeviceName, appDir, url)
-            ).ToList();
+            var forms = Screen.AllScreens
+                .Select(s => new ScreensaverForm(s, s.DeviceName == primary.DeviceName, appDir, url))
+                .ToList();
 
-            // Show non-primary forms first so they don't accidentally steal focus
-            foreach (var f in forms.Where(f => !f.IsAccessible))
+            // Show non-primary forms first so the primary gets focus last.
+            foreach (var f in forms.Where(f => !f.IsPrimary))
                 f.Show();
-            foreach (var f in forms.Where(f => f.Bounds.Location == primary.Bounds.Location))
+            foreach (var f in forms.Where(f =>  f.IsPrimary))
                 f.Show();
 
-            // Run message loop; any form closing (via hook) calls Application.Exit()
             Application.Run(new MultiFormContext(forms));
         }
         finally
@@ -104,7 +91,6 @@ static class Program
     {
         var config = ConfigManager.Load();
         string url = UrlBuilder.Build(config, overrideResolution: "0.5", overrideFps: 24);
-
         Application.Run(new PreviewForm(parentHwnd, appDir, url));
     }
 }
@@ -123,14 +109,14 @@ internal sealed class MultiFormContext : ApplicationContext
 
     private void OnFormClosed(object? sender, FormClosedEventArgs e)
     {
-        // Close all remaining forms, then exit
+        // One form closed (input detected) — close all remaining and exit cleanly.
         foreach (var f in _forms)
         {
             if (f != sender && !f.IsDisposed)
-            {
-                try { f.Close(); } catch { /* already closing */ }
-            }
+                try { f.Close(); } catch { }
         }
-        ExitThread();
+        // Application.Exit() terminates the message loop and signals all
+        // remaining forms to close, ensuring a clean process exit.
+        Application.Exit();
     }
 }

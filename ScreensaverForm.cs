@@ -28,6 +28,9 @@ internal sealed class ScreensaverForm : Form
     private readonly string   _url;
     private readonly bool     _isPrimary;
 
+    /// <summary>True for the form on the primary display; used by Program to control show order.</summary>
+    public bool IsPrimary => _isPrimary;
+
     public ScreensaverForm(Screen screen, bool isPrimary, string appDir, string url)
     {
         _appDir    = appDir;
