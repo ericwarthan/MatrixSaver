@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Screensaver — Settings</title>
+<style>
+  :root {
+    --green:        #00ff41;
+    --green-dim:    #00b32c;
+    --green-dark:   #003310;
+    --green-border: #1a3a1a;
+    --bg:           #080808;
+    --panel:        #0e0e0e;
+    --panel-hover:  #141414;
+    --text:         #c8ffc8;
+    --text-dim:     #5a8a5a;
+    --input-bg:     #111811;
+    --input-border: #1c3c1c;
+    --radius:       6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-rows: 48px 1fr 52px;
+    height: 100vh;
+  }
+
+  #header {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--green-border);
+    background: #050505;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  #header h1 {
+    font-size: 15px;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    flex: 1;
+  }
+
+  #header .tagline {
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  #body {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  #controls {
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Extra right padding: 6px scrollbar + 10px breathing room before clip edge */
+    padding: 12px 6px 16px 14px;
+    border-right: 1px solid var(--green-border);
+  }
+
+  #controls::-webkit-scrollbar { width: 6px; }
+  #controls::-webkit-scrollbar-track { background: var(--bg); }
+  #controls::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 3px; }
+
+  #preview-panel {
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+  }
+
+  #preview-frame-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  #preview-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  #url-bar {
+    padding: 6px 10px;
+    background: #050505;
+    border-top: 1px solid var(--green-border);
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────── */
+  #footer {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 10px;
+    border-top: 1px solid var(--green-border);
+    background: #050505;
+  }
+
+  #footer .spacer { flex: 1; }
+
+  /* ── Sections ───────────────────────────────────────────────── */
+  .section {
+    margin-bottom: 10px;
+    border: 1px solid var(--green-border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    padding: 7px 10px;
+    background: var(--green-dark);
+    cursor: pointer;
+    user-select: none;
+    gap: 6px;
+  }
+
+  .section-header:hover { background: #004a18; }
+
+  .section-title {
+    flex: 1;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    font-weight: bold;
+  }
+
+  .section-arrow {
+    color: var(--green-dim);
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .section.collapsed .section-arrow { transform: rotate(-90deg); }
+  .section.collapsed .section-body  { display: none; }
+
+  .section-reset {
+    background: none;
+    border: 1px solid var(--green-border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .section-reset:hover { border-color: var(--green-dim); color: var(--green); }
+
+  .section-body { padding: 10px 14px 10px 10px; }
+
+  /* ── Form rows ──────────────────────────────────────────────── */
+  .row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 9px;
+    gap: 8px;
+    min-height: 24px;
+  }
+  .row:last-child { margin-bottom: 0; }
+
+  .row label {
+    width: 130px;
+    flex-shrink: 0;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  .row-value {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Select ─────────────────────────────────────────────────── */
+  select {
+    flex: 1;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius);
+    padding: 4px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300b32c'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 22px;
+  }
+  select:focus {
+    outline: none;
+    border-color: var(--green-dim);
+  }
+  select option { background: #0a150a; }
+
+  /* ── Range slider ───────────────────────────────────────────── */
+  .slider-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--input-border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--green-dim);
+    border-radius: 50%;
+    border: 2px solid var(--green);
+    cursor: pointer;
+    box-shadow: 0 0 4px var(--green-dim);
+  }
+  input[type=range]:focus::-webkit-slider-thumb { background: var(--green); }
+
+  .range-val {
+    width: 50px;
+    text-align: right;
+    padding-right: 4px;   /* keep last char from touching clip edge */
+    color: var(--green);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* ── Toggle switch ──────────────────────────────────────────── */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex: 0 0 40px;   /* fixed width — never grows into description text */
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--input-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--green-dim); }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    background: #888;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+    pointer-events: none;
+  }
+  .toggle input:checked ~ .toggle-thumb {
+    transform: translateX(16px);
+    background: var(--green);
+  }
+
+  .toggle-label { color: var(--text-dim); font-size: 11px; flex: 1; }
+
+  /* ── Color picker ───────────────────────────────────────────── */
+  .color-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+
+  input[type=color] {
+    width: 36px;
+    height: 24px;
+    padding: 1px 2px;
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+    background: var(--input-bg);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+  .hex-input {
+    width: 76px;
+    background: var(--input-bg);
+    color: var(--green);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius);
+    padding: 3px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .hex-input:focus { outline: none; border-color: var(--green-dim); }
+
+  /* ── Text input ─────────────────────────────────────────────── */
+  input[type=text] {
+    flex: 1;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius);
+    padding: 4px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+  }
+  input[type=text]::placeholder { color: var(--text-dim); }
+  input[type=text]:focus { outline: none; border-color: var(--green-dim); }
+
+  /* ── Buttons ────────────────────────────────────────────────── */
+  .btn {
+    padding: 8px 18px;
+    border-radius: var(--radius);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--green-dim);
+    color: #000;
+    border-color: var(--green);
+  }
+  .btn-primary:hover { background: var(--green); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: var(--green-border);
+  }
+  .btn-secondary:hover { border-color: var(--green-dim); color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    color: #c04040;
+    border-color: #4a1515;
+  }
+  .btn-danger:hover { border-color: #c04040; color: #ff6060; }
+
+  /* ── Saved toast ────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 60px;
+    right: 16px;
+    background: var(--green-dark);
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    letter-spacing: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <div id="header">
+    <h1>&#9635; Matrix Screensaver</h1>
+    <span class="tagline">Rezmason/matrix · WebView2 Native</span>
+  </div>
+
+  <!-- ── Body ──────────────────────────────────────────────── -->
+  <div id="body">
+
+    <!-- Left: Controls -->
+    <div id="controls">
+
+      <!-- Version & Style -->
+      <div class="section" id="sec-version">
+        <div class="section-header" onclick="toggleSection('sec-version')">
+          <span class="section-title">Version &amp; Style</span>
+          <button class="section-reset" onclick="resetSection('version', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Version</label>
+            <div class="row-value">
+              <select id="version">
+                <option value="classic">Classic (1999)</option>
+                <option value="operator">Operator</option>
+                <option value="resurrections">Resurrections</option>
+                <option value="megacity">Megacity</option>
+                <option value="nightmare">Nightmare</option>
+                <option value="paradise">Paradise</option>
+                <option value="palimpsest">Palimpsest</option>
+                <option value="morpheus">Morpheus</option>
+                <option value="bugs">Bugs</option>
+                <option value="3d">3D</option>
+                <option value="trinity">Trinity</option>
+                <option value="neomatrixology">Neomatrixology</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <label>Effect</label>
+            <div class="row-value">
+              <select id="effect">
+                <option value="">Version default</option>
+                <option value="palette">Palette</option>
+                <option value="plain">Plain</option>
+                <option value="pride">Pride</option>
+                <option value="trans">Trans</option>
+                <option value="stripes">Stripes</option>
+                <option value="image">Image</option>
+                <option value="mirror">Mirror</option>
+                <option value="none">None</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <label>Font</label>
+            <div class="row-value">
+              <select id="font">
+                <option value="">Version default</option>
+                <option value="matrixcode">Matrix Code (film)</option>
+                <option value="resurrections">Resurrections</option>
+                <option value="gothic">Gothic</option>
+                <option value="coptic">Coptic</option>
+                <option value="huberfishA">HuberfishA</option>
+                <option value="huberfishD">HuberfishD</option>
+                <option value="neomatrixology">Neomatrixology</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Display -->
+      <div class="section" id="sec-display">
+        <div class="section-header" onclick="toggleSection('sec-display')">
+          <span class="section-title">Display</span>
+          <button class="section-reset" onclick="resetSection('display', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Columns</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="numColumns" min="10" max="300" step="1" data-nullable>
+              <span class="range-val" id="numColumns-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Resolution</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="resolution" min="0.25" max="2.0" step="0.05">
+              <span class="range-val" id="resolution-val">1.0</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Frame Rate</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="fps" min="5" max="60" step="1">
+              <span class="range-val" id="fps-val">60</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Density</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="density" min="0" max="5" step="0.1" data-nullable>
+              <span class="range-val" id="density-val">auto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animation -->
+      <div class="section" id="sec-animation">
+        <div class="section-header" onclick="toggleSection('sec-animation')">
+          <span class="section-title">Animation</span>
+          <button class="section-reset" onclick="resetSection('animation', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Anim Speed</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="animationSpeed" min="0" max="3" step="0.05" data-nullable>
+              <span class="range-val" id="animationSpeed-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Fall Speed</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="fallSpeed" min="0" max="2.5" step="0.05" data-nullable>
+              <span class="range-val" id="fallSpeed-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Cycle Speed</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="cycleSpeed" min="0" max="0.5" step="0.005" data-nullable>
+              <span class="range-val" id="cycleSpeed-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Raindrop Length</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="raindropLength" min="0.05" max="3" step="0.05" data-nullable>
+              <span class="range-val" id="raindropLength-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Forward Speed</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="forwardSpeed" min="0" max="2" step="0.05" data-nullable>
+              <span class="range-val" id="forwardSpeed-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Slant (°)</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="slant" min="-45" max="45" step="1">
+              <span class="range-val" id="slant-val">0°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloom & FX -->
+      <div class="section" id="sec-bloom">
+        <div class="section-header" onclick="toggleSection('sec-bloom')">
+          <span class="section-title">Bloom &amp; FX</span>
+          <button class="section-reset" onclick="resetSection('bloom', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Bloom Size</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="bloomSize" min="0" max="1" step="0.01" data-nullable>
+              <span class="range-val" id="bloomSize-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Bloom Strength</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="bloomStrength" min="0" max="1" step="0.01" data-nullable>
+              <span class="range-val" id="bloomStrength-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Dither</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="ditherMagnitude" min="0" max="0.5" step="0.005" data-nullable>
+              <span class="range-val" id="ditherMagnitude-val">auto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div class="section" id="sec-colors">
+        <div class="section-header" onclick="toggleSection('sec-colors')">
+          <span class="section-title">Colors</span>
+          <button class="section-reset" onclick="resetSection('colors', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Background</label>
+            <div class="row-value">
+              <div class="color-wrap">
+                <input type="color" id="backgroundColor" value="#000000">
+                <input type="text"  id="backgroundColor-hex" class="hex-input" value="#000000" maxlength="7">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <label>Cursor</label>
+            <div class="row-value">
+              <div class="color-wrap">
+                <input type="color" id="cursorColor" value="#00ff41">
+                <input type="text"  id="cursorColor-hex" class="hex-input" value="#00ff41" maxlength="7">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <label>Glint</label>
+            <div class="row-value">
+              <div class="color-wrap">
+                <input type="color" id="glintColor" value="#ffffff">
+                <input type="text"  id="glintColor-hex" class="hex-input" value="#ffffff" maxlength="7">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intensity -->
+      <div class="section" id="sec-intensity">
+        <div class="section-header" onclick="toggleSection('sec-intensity')">
+          <span class="section-title">Intensity</span>
+          <button class="section-reset" onclick="resetSection('intensity', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Cursor Intensity</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="cursorIntensity" min="0" max="8" step="0.1" data-nullable>
+              <span class="range-val" id="cursorIntensity-val">auto</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Glyph Intensity</label>
+            <div class="row-value slider-wrap">
+              <input type="range" id="glintIntensity" min="0" max="8" step="0.1" data-nullable>
+              <span class="range-val" id="glintIntensity-val">auto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options / Toggles -->
+      <div class="section" id="sec-options">
+        <div class="section-header" onclick="toggleSection('sec-options')">
+          <span class="section-title">Options</span>
+          <button class="section-reset" onclick="resetSection('options', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Skip Intro</label>
+            <div class="row-value">
+              <label class="toggle">
+                <input type="checkbox" id="skipIntro">
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
+              <span class="toggle-label">Skip opening animation</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Glyph Flip</label>
+            <div class="row-value">
+              <label class="toggle">
+                <input type="checkbox" id="glyphFlip">
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
+              <span class="toggle-label">Horizontally mirror glyphs</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Volumetric</label>
+            <div class="row-value">
+              <label class="toggle">
+                <input type="checkbox" id="volumetric">
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
+              <span class="toggle-label">3D perspective rain</span>
+            </div>
+          </div>
+          <div class="row">
+            <label>Loops</label>
+            <div class="row-value">
+              <label class="toggle">
+                <input type="checkbox" id="loops">
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
+              <span class="toggle-label">Loop animation</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom / Advanced -->
+      <div class="section" id="sec-custom">
+        <div class="section-header" onclick="toggleSection('sec-custom')">
+          <span class="section-title">Custom / Advanced</span>
+          <button class="section-reset" onclick="resetSection('custom', event)">↺ Reset</button>
+          <span class="section-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="row">
+            <label>Stripe Colors</label>
+            <div class="row-value">
+              <input type="text" id="stripeColors" placeholder="r,g,b,r,g,b,… (0–1 floats)">
+            </div>
+          </div>
+          <div class="row">
+            <label>Palette</label>
+            <div class="row-value">
+              <input type="text" id="palette" placeholder="r,g,b,pos,r,g,b,pos,… (0–1 floats)">
+            </div>
+          </div>
+          <div class="row">
+            <label>Image URL</label>
+            <div class="row-value">
+              <input type="text" id="imageUrl" placeholder="https://… (for effect=image)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /controls -->
+
+    <!-- Right: Preview -->
+    <div id="preview-panel">
+      <div id="preview-frame-wrap">
+        <iframe id="preview-iframe" src="" sandbox="allow-scripts allow-same-origin allow-pointer-lock"></iframe>
+        <div id="preview-overlay">Loading preview…</div>
+      </div>
+      <div id="url-bar" title="Full matrix URL with current settings">—</div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ── Footer ─────────────────────────────────────────────── -->
+  <div id="footer">
+    <button class="btn btn-danger"    onclick="resetAll()">Reset All</button>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary" onclick="refreshPreview()">⟳ Preview</button>
+    <button class="btn btn-primary"   onclick="saveSettings()">Save Settings</button>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast">Settings saved</div>
+
+<script src="settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Build output
+dist/
+bin/
+obj/
+
+# Visual Studio / JetBrains
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea.MatrixSaver.dir/
+
+# Debug symbols
+*.pdb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+
+# Logs
+*.log
