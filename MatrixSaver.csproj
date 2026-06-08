@@ -10,7 +10,6 @@
     <RootNamespace>MatrixSaver</RootNamespace>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <!-- Single-file self-contained: no .NET runtime install required on target machine -->
     <PublishSingleFile>true</PublishSingleFile>

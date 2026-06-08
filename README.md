@@ -36,7 +36,7 @@ To uninstall, run `uninstall.bat` as Administrator.
 Requires [.NET 8 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-git clone --recurse-submodules https://github.com/<your-username>/MatrixSaver
+git clone --recurse-submodules https://github.com/ericwarthan/MatrixSaver
 cd MatrixSaver
 bash build.sh
 ```

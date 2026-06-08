@@ -126,7 +126,7 @@ public static class UrlBuilder
         AddNum("raindropLength",  cfg.RaindropLength);
         AddNum("ditherMagnitude", cfg.DitherMagnitude);
         AddNum("cursorIntensity", cfg.CursorIntensity);
-        AddNum("glyphIntensity",  cfg.GlintIntensity);  // Plex URL param is glyphIntensity
+        AddNum("glyphIntensity",  cfg.GlintIntensity);
         AddNum("density",         cfg.Density);
         AddNum("forwardSpeed",    cfg.ForwardSpeed);
         if (cfg.Slant != 0) AddNum("slant", cfg.Slant);
